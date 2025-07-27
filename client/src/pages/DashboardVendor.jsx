@@ -1,4 +1,6 @@
 import React, { useEffect, useState } from "react";
+import Header from "../components/Header";
+import Footer from "../components/Footer";
 
 function ReviewForm({ order, currentUser }) {
   const [rating, setRating] = useState(5);
@@ -96,6 +98,15 @@ const DashboardVendor = () => {
     recentGroupOrders: []
   });
 
+  const [supplierOverviewData, setSupplierOverviewData] = useState({
+    totalOrders: 0,
+    totalOrdersThisWeek: 0,
+    totalOrdersThisMonth: 0,
+    pendingDeliveries: 0,
+    revenueEarned: 0,
+    topRatedProduct: null
+  });
+
   useEffect(() => {
     fetchSuppliers();
     getCurrentUser();
@@ -106,6 +117,11 @@ const DashboardVendor = () => {
       fetchMyGroups();
       fetchAvailableGroups();
       fetchOverviewData();
+      fetchSupplierOverviewData();
+      const interval = setInterval(() => {
+        fetchSupplierOverviewData();
+      }, 30000); // Poll every 30 seconds
+      return () => clearInterval(interval);
     }
   }, [currentUser]);
 
@@ -196,18 +212,33 @@ const DashboardVendor = () => {
 
   const fetchOverviewData = async () => {
     try {
-      if (!currentUser || !currentUser.id) {
-        console.log("No current user, skipping overview fetch");
-        return;
-      }
-      const response = await fetch(`/api/grouporders/vendor-overview/${currentUser.id}`);
-      if (!response.ok) throw new Error("Failed to fetch overview data");
-      const data = await response.json();
-      setOverviewData(data);
-    } catch (error) {
-      console.error("Error fetching overview data:", error);
-      // Don't show alert for overview data as it's not critical
+  useEffect(() => {
+    let filtered = suppliersData;
+
+    if (filters.rating) {
+      filtered = filtered.filter(
+        (s) => s.rating >= parseFloat(filters.rating)
+      );
     }
+    if (filters.deliveryTime) {
+      filtered = filtered.filter(
+        (s) => s.deliveryTime === filters.deliveryTime
+      );
+    }
+    if (filters.verified) {
+      filtered = filtered.filter(
+        (s) => s.verified === (filters.verified === "true")
+      );
+    }
+
+    setFilteredSuppliers(filtered);
+  }, [filters, suppliersData]);
+
+  const handleFilterChange = (e) => {
+    setFilters({
+      ...filters,
+      [e.target.name]: e.target.value,
+    });
   };
 
   useEffect(() => {
@@ -369,35 +400,6 @@ const DashboardVendor = () => {
       return;
     }
     try {
-      const response = await fetch(`/api/grouporders/${groupId}/place-order`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ 
-          creatorId: currentUser.id,
-          orderType: "group_order"
-        }),
-      });
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || "Failed to place group order");
-      }
-      alert("Group order placed successfully! Suppliers will now see this order.");
-      // Refresh the groups
-      fetchMyGroups();
-      fetchAvailableGroups();
-      fetchOverviewData();
-    } catch (error) {
-      alert(error.message);
-    }
-  };
-
-  const handleLogout = () => {
-    localStorage.removeItem('token');
-    window.location.href = '/login';
-  };
-
   const renderMainPanel = () => {
     switch (activeTab) {
       case "Overview":
@@ -474,6 +476,89 @@ const DashboardVendor = () => {
               </div>
             </div>
 
+            {/* Supplier Overview Cards */}
+            <div className="card-grid" style={{ marginBottom: "30px" }}>
+              <div className="card-item" style={{ 
+                background: "linear-gradient(135deg, #ff9966 0%, #ff5e62 100%)",
+                border: "none",
+                color: "#fff"
+              }}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                  <div>
+                    <h3 style={{ margin: "0 0 10px 0", fontSize: "2rem", fontWeight: "bold" }}>
+                      {supplierOverviewData.totalOrdersThisWeek}
+                    </h3>
+                    <p style={{ margin: 0, opacity: 0.9 }}>Total Orders This Week</p>
+                  </div>
+                  <div style={{ fontSize: "2.5rem" }}>📅</div>
+                </div>
+              </div>
+
+              <div className="card-item" style={{ 
+                background: "linear-gradient(135deg, #ff9966 0%, #ff5e62 100%)",
+                border: "none",
+                color: "#fff"
+              }}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                  <div>
+                    <h3 style={{ margin: "0 0 10px 0", fontSize: "2rem", fontWeight: "bold" }}>
+                      {supplierOverviewData.totalOrdersThisMonth}
+                    </h3>
+                    <p style={{ margin: 0, opacity: 0.9 }}>Total Orders This Month</p>
+                  </div>
+                  <div style={{ fontSize: "2.5rem" }}>📅</div>
+                </div>
+              </div>
+
+              <div className="card-item" style={{ 
+                background: "linear-gradient(135deg, #f6d365 0%, #fda085 100%)",
+                border: "none",
+                color: "#fff"
+              }}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                  <div>
+                    <h3 style={{ margin: "0 0 10px 0", fontSize: "2rem", fontWeight: "bold" }}>
+                      {supplierOverviewData.pendingDeliveries}
+                    </h3>
+                    <p style={{ margin: 0, opacity: 0.9 }}>Pending Deliveries</p>
+                  </div>
+                  <div style={{ fontSize: "2.5rem" }}>⏳</div>
+                </div>
+              </div>
+
+              <div className="card-item" style={{ 
+                background: "linear-gradient(135deg, #84fab0 0%, #8fd3f4 100%)",
+                border: "none",
+                color: "#fff"
+              }}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                  <div>
+                    <h3 style={{ margin: "0 0 10px 0", fontSize: "2rem", fontWeight: "bold" }}>
+                      ${supplierOverviewData.revenueEarned}
+                    </h3>
+                    <p style={{ margin: 0, opacity: 0.9 }}>Revenue Earned</p>
+                  </div>
+                  <div style={{ fontSize: "2.5rem" }}>💵</div>
+                </div>
+              </div>
+
+              <div className="card-item" style={{ 
+                background: "linear-gradient(135deg, #fbc7a4 0%, #f7a1a1 100%)",
+                border: "none",
+                color: "#fff"
+              }}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                  <div>
+                    <h3 style={{ margin: "0 0 10px 0", fontSize: "1.5rem", fontWeight: "bold" }}>
+                      {supplierOverviewData.topRatedProduct || "N/A"}
+                    </h3>
+                    <p style={{ margin: 0, opacity: 0.9 }}>Top Rated Product</p>
+                  </div>
+                  <div style={{ fontSize: "2.5rem" }}>⭐</div>
+                </div>
+              </div>
+            </div>
+
             {/* Recent Group Orders */}
             <div style={{ marginTop: "30px" }}>
               <h3 style={{ color: "#fff", marginBottom: "20px", fontSize: "1.3rem" }}>
@@ -501,6 +586,35 @@ const DashboardVendor = () => {
                         <span style={{ 
                           padding: "4px 8px", 
                           borderRadius: "4px", 
+                          fontSize: "0.8em",
+                          backgroundColor: order.status === "active" ? "#28a745" : 
+                                        order.status === "ordered" ? "#1e90ff" : 
+                                        order.status === "ongoing" ? "#ffa500" : 
+                                        order.status === "completed" ? "#43e97b" : "#6c757d",
+                          color: "#fff"
+                        }}>
+                          {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
+                        </span>
+                      </div>
+                      <p style={{ color: "#b0b8c9", marginBottom: "5px" }}>
+                        <strong>Quantity:</strong> {order.totalQuantity} units
+                      </p>
+                      <p style={{ color: "#b0b8c9", marginBottom: "5px" }}>
+                        <strong>Participants:</strong> {order.participants.length}
+                      </p>
+                      <p style={{ color: "#b0b8c9", marginBottom: "5px" }}>
+                        <strong>Deadline:</strong> {new Date(order.deadline).toLocaleDateString()}
+                      </p>
+                      <p style={{ color: "#b0b8c9", marginBottom: "0" }}>
+                        <strong>Created:</strong> {new Date(order.createdAt).toLocaleDateString()}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </section>
+        );
                           fontSize: "0.8em",
                           backgroundColor: order.status === "active" ? "#28a745" : 
                                         order.status === "ordered" ? "#1e90ff" : 
@@ -923,60 +1037,64 @@ const DashboardVendor = () => {
   };
 
   return (
-    <div style={{ minHeight: '100vh', width: '100vw', background: 'radial-gradient(circle at 70% 20%, #1e90ff 0%, #0a1833 100%)', display: 'flex', alignItems: 'stretch', justifyContent: 'stretch', margin: 0, padding: 0, overflowX: 'hidden' }}>
-      <div style={{ width: '100vw', height: '100vh', background: '#101828', color: '#fff', boxSizing: 'border-box', padding: 0, minHeight: '100vh', display: 'flex', gap: 0, margin: 0, borderRadius: 0, boxShadow: 'none' }}>
-        <button 
-          onClick={toggleSidebar} 
-          className="btn-secondary"
-          style={{ marginBottom: "20px", alignSelf: "flex-start" }}
-        >
-      {sidebarOpen ? "Close Sidebar" : "Open Sidebar"}
-    </button>
+    <>
+      <Header userName={currentUser?.name || currentUser?.email} onLogout={handleLogout} />
+      <div style={{ minHeight: '100vh', width: '100vw', background: 'radial-gradient(circle at 70% 20%, #1e90ff 0%, #0a1833 100%)', display: 'flex', alignItems: 'stretch', justifyContent: 'stretch', margin: 0, padding: 0, overflowX: 'hidden' }}>
+        <div style={{ width: '100vw', height: '100vh', background: '#101828', color: '#fff', boxSizing: 'border-box', padding: 0, minHeight: '100vh', display: 'flex', gap: 0, margin: 0, borderRadius: 0, boxShadow: 'none', paddingBottom: '60px' }}>
+          <button 
+            onClick={toggleSidebar} 
+            className="btn-secondary"
+            style={{ marginBottom: "20px", alignSelf: "flex-start" }}
+          >
+        {sidebarOpen ? "Close Sidebar" : "Open Sidebar"}
+      </button>
 
-    {sidebarOpen && (
-          <nav className="sidebar" style={{ width: "250px", flexShrink: 0 }}>
-            <ul style={{ listStyleType: "none", padding: 0, margin: 0 }}>
-          {["Overview", "Browse Suppliers", "Group Orders", "My Orders", "Reviews", "Settings"].map((tab) => (
-            <li
-              key={tab}
-                  className={`sidebar-item ${activeTab === tab ? 'active' : ''}`}
-              onClick={() => setActiveTab(tab)}
-            >
-              {tab}
-            </li>
-          ))}
-        </ul>
-      </nav>
-    )}
+      {sidebarOpen && (
+            <nav className="sidebar" style={{ width: "250px", flexShrink: 0 }}>
+              <ul style={{ listStyleType: "none", padding: 0, margin: 0 }}>
+            {["Overview", "Browse Suppliers", "Group Orders", "My Orders", "Reviews", "Settings"].map((tab) => (
+              <li
+                key={tab}
+                    className={`sidebar-item ${activeTab === tab ? 'active' : ''}`}
+                onClick={() => setActiveTab(tab)}
+              >
+                {tab}
+              </li>
+            ))}
+          </ul>
+        </nav>
+      )}
 
-        <main style={{ flexGrow: 1 }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "2rem" }}>
-            <h1 className="page-title" style={{ margin: 0 }}>Vendor Dashboard</h1>
-        {currentUser && (
-          <div style={{ textAlign: "right" }}>
-                <p style={{ margin: 0, fontSize: "1.1rem", fontWeight: "bold", color: "#fff" }}>
-              Welcome, {currentUser.name || currentUser.email || "User"}!
-            </p>
-                <p style={{ margin: 0, fontSize: "0.9rem", color: "#b0b8c9" }}>
-              Role: {currentUser.role}
-            </p>
-            <button 
-              onClick={handleLogout}
-                  className="btn-secondary"
-              style={{ 
-                marginTop: "0.5rem", 
-                    backgroundColor: "#dc3545"
-              }}
-            >
-              Logout
-            </button>
-          </div>
-        )}
+          <main style={{ flexGrow: 1 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "2rem" }}>
+              <h1 className="page-title" style={{ margin: 0 }}>Vendor Dashboard</h1>
+          {currentUser && (
+            <div style={{ textAlign: "right" }}>
+                  <p style={{ margin: 0, fontSize: "1.1rem", fontWeight: "bold", color: "#fff" }}>
+                Welcome, {currentUser.name || currentUser.email || "User"}!
+              </p>
+                  <p style={{ margin: 0, fontSize: "0.9rem", color: "#b0b8c9" }}>
+                Role: {currentUser.role}
+              </p>
+              <button 
+                onClick={handleLogout}
+                    className="btn-secondary"
+                style={{ 
+                  marginTop: "0.5rem", 
+                      backgroundColor: "#dc3545"
+                }}
+              >
+                Logout
+              </button>
+            </div>
+          )}
+        </div>
+        {renderMainPanel()}
+      </main>
+        </div>
       </div>
-      {renderMainPanel()}
-    </main>
-      </div>
-    </div>
+      <Footer />
+    </>
   );
 };
 

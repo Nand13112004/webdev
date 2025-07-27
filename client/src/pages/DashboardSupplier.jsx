@@ -1,4 +1,6 @@
 import React, { useEffect, useState } from "react";
+import Header from "../components/Header";
+import Footer from "../components/Footer";
 
 const DashboardSupplier = () => {
   const [activeTab, setActiveTab] = useState("Dashboard");
@@ -13,6 +15,13 @@ const DashboardSupplier = () => {
   const [groupOrders, setGroupOrders] = useState([]);
   const [acceptedOrders, setAcceptedOrders] = useState([]);
 
+  const [supplierOverviewData, setSupplierOverviewData] = useState({
+    totalOrdersThisWeek: 0,
+    pendingDeliveries: 0,
+    topRatedProduct: null,
+    revenueEarned: 0
+  });
+
   useEffect(() => {
     getCurrentUser();
   }, []);
@@ -22,6 +31,11 @@ const DashboardSupplier = () => {
       fetchProducts();
       fetchGroupOrders();
       fetchAcceptedOrders();
+      fetchSupplierOverviewData();
+      const interval = setInterval(() => {
+        fetchSupplierOverviewData();
+      }, 30000); // Poll every 30 seconds
+      return () => clearInterval(interval);
     }
   }, [currentUser]);
 
@@ -108,17 +122,17 @@ const DashboardSupplier = () => {
     }
   };
 
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    if (editingProduct) {
-      setEditingProduct({ ...editingProduct, [name]: value });
-    } else {
-      setNewProduct({ ...newProduct, [name]: value });
-    }
-  };
-
-  const addProduct = async () => {
-    if (!newProduct.name || !newProduct.price || !newProduct.stock || !newProduct.delivery) {
+  const fetchSupplierOverviewData = async () => {
+    try {
+      if (!currentUser || !currentUser.id) {
+        console.log("No current user, skipping supplier overview fetch");
+        return;
+      }
+      const response = await fetch(`/api/grouporders/supplier-overview/${currentUser.id}`);
+      if (!response.ok) throw new Error("Failed to fetch supplier overview data");
+      const data = await response.json();
+      setSupplierOverviewData(data);
+    } catch (error) {
       alert("Please fill all fields to add a product.");
       return;
     }
@@ -246,13 +260,71 @@ const DashboardSupplier = () => {
         return (
           <section>
             <h2 className="page-title" style={{ fontSize: "1.5rem", marginBottom: "20px" }}>Dashboard Overview</h2>
-            <p style={{ color: "#b0b8c9", marginBottom: "20px" }}>Welcome message with supplier name</p>
-            <ul style={{ color: "#e2e8f0", lineHeight: "1.6" }}>
-              <li>Total orders this week/month</li>
-              <li>Pending deliveries</li>
-              <li>Top-rated product</li>
-              <li>Revenue earned (optional)</li>
-            </ul>
+            <div className="card-grid" style={{ marginBottom: "30px" }}>
+              <div className="card-item" style={{ 
+                background: "linear-gradient(135deg, #ff9966 0%, #ff5e62 100%)",
+                border: "none",
+                color: "#fff"
+              }}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                  <div>
+                    <h3 style={{ margin: "0 0 10px 0", fontSize: "2rem", fontWeight: "bold" }}>
+                      {supplierOverviewData.totalOrdersThisWeek}
+                    </h3>
+                    <p style={{ margin: 0, opacity: 0.9 }}>Total Orders This Week</p>
+                  </div>
+                  <div style={{ fontSize: "2.5rem" }}>📅</div>
+                </div>
+              </div>
+
+              <div className="card-item" style={{ 
+                background: "linear-gradient(135deg, #f6d365 0%, #fda085 100%)",
+                border: "none",
+                color: "#fff"
+              }}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                  <div>
+                    <h3 style={{ margin: "0 0 10px 0", fontSize: "2rem", fontWeight: "bold" }}>
+                      {supplierOverviewData.pendingDeliveries}
+                    </h3>
+                    <p style={{ margin: 0, opacity: 0.9 }}>Pending Deliveries</p>
+                  </div>
+                  <div style={{ fontSize: "2.5rem" }}>⏳</div>
+                </div>
+              </div>
+
+              <div className="card-item" style={{ 
+                background: "linear-gradient(135deg, #fbc7a4 0%, #f7a1a1 100%)",
+                border: "none",
+                color: "#fff"
+              }}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                  <div>
+                    <h3 style={{ margin: "0 0 10px 0", fontSize: "1.5rem", fontWeight: "bold" }}>
+                      {supplierOverviewData.topRatedProduct || "N/A"}
+                    </h3>
+                    <p style={{ margin: 0, opacity: 0.9 }}>Top Rated Product</p>
+                  </div>
+                  <div style={{ fontSize: "2.5rem" }}>⭐</div>
+                </div>
+              </div>
+
+              <div className="card-item" style={{ 
+                background: "linear-gradient(135deg, #84fab0 0%, #8fd3f4 100%)",
+                border: "none",
+                color: "#fff"
+              }}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                  <div>
+                    <h3 style={{ margin: "0 0 10px 0", fontSize: "2rem", fontWeight: "bold" }}>
+                      ${supplierOverviewData.revenueEarned}
+                    </h3>
+                    <p style={{ margin: 0, opacity: 0.9 }}>Revenue Earned</p>
+                  </div>
+                  <div style={{ fontSize: "2.5rem" }}>💵</div>
+                </div>
+              </div>
+            </div>
           </section>
         );
       case "Product Listings":
@@ -582,50 +654,42 @@ const DashboardSupplier = () => {
   };
 
   return (
-    <div style={{ minHeight: '100vh', width: '100vw', background: 'radial-gradient(circle at 70% 20%, #1e90ff 0%, #0a1833 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: 0, padding: 0, overflowX: 'hidden' }}>
-      <div style={{ width: '100%', maxWidth: '1200px', margin: '0 auto', background: '#101828', borderRadius: '12px', boxShadow: '0 8px 40px rgba(30, 144, 255, 0.15)', color: '#fff', boxSizing: 'border-box', padding: '40px 30px', minHeight: '600px', display: 'flex', gap: '20px' }}>
+    <>
+      <Header userName={currentUser?.name || currentUser?.email} onLogout={handleLogout} />
+      <div style={{ minHeight: '100vh', width: '100vw', background: 'radial-gradient(circle at 70% 20%, #1e90ff 0%, #0a1833 100%)', display: 'flex', alignItems: 'stretch', justifyContent: 'stretch', margin: 0, padding: 0, overflowX: 'hidden' }}>
+        <div style={{ width: '100vw', height: '100vh', background: '#101828', color: '#fff', boxSizing: 'border-box', padding: 0, minHeight: '100vh', display: 'flex', gap: 0, margin: 0, borderRadius: 0, boxShadow: 'none', paddingBottom: '60px' }}>
           <nav className="sidebar" style={{ width: "250px", flexShrink: 0 }}>
             <ul style={{ listStyleType: "none", padding: 0, margin: 0 }}>
-              {["Dashboard", "Product Listings", "Orders", "Accepted Orders", "Ratings", "Analytics", "Settings", "Help"].map((tab) => (
-            <li
-              key={tab}
+              {[
+                "Dashboard", "Product Listings", "Orders", "Accepted Orders", "Ratings", "Analytics", "Settings", "Help"
+              ].map((tab) => (
+                <li
+                  key={tab}
                   className={`sidebar-item ${activeTab === tab ? 'active' : ''}`}
-              onClick={() => setActiveTab(tab)}
-            >
-              {tab}
-            </li>
-          ))}
-        </ul>
-      </nav>
-
+                  onClick={() => setActiveTab(tab)}
+                >
+                  {tab}
+                </li>
+              ))}
+            </ul>
+          </nav>
           <main style={{ flexGrow: 1 }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "2rem" }}>
-              <h1 className="page-title" style={{ margin: 0 }}>Supplier Dashboard</h1>
-          {currentUser && (
-            <div style={{ textAlign: "right" }}>
-                  <p style={{ margin: 0, fontSize: "1.1rem", fontWeight: "bold", color: "#fff" }}>
-                Welcome, {currentUser.name || currentUser.email}!
-              </p>
-                  <p style={{ margin: 0, fontSize: "0.9rem", color: "#b0b8c9" }}>
-                Role: {currentUser.role}
-              </p>
-              <button 
-                onClick={handleLogout}
-                    className="btn-secondary"
-                style={{ 
-                  marginTop: "0.5rem", 
-                      backgroundColor: "#dc3545"
-                }}
-              >
-                Logout
-              </button>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "2rem" }}>
+              <h1 className="page-title" style={{ margin: 0 , paddingTop: "20px" }}>Supplier Dashboard</h1>
+              {currentUser && (
+                <div style={{ textAlign: "right" }}>
+                 
+
+                  
+                </div>
+              )}
             </div>
-          )}
+            {renderMainPanel()}
+          </main>
         </div>
-        {renderMainPanel()}
-      </main>
-    </div>
-  </div>
+      </div>
+      <Footer />
+    </>
   );
 };
 

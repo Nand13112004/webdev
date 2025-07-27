@@ -455,4 +455,54 @@ router.get('/all', async (req, res) => {
   }
 });
 
+// Supplier overview analytics endpoint
+router.get('/supplier-overview/:supplierId', async (req, res) => {
+  try {
+    const { supplierId } = req.params;
+    const now = new Date();
+    const startOfWeek = new Date(now);
+    startOfWeek.setDate(now.getDate() - now.getDay());
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+
+    // Total orders this week/month
+    const totalOrders = await GroupOrder.countDocuments({ supplierId });
+    const totalOrdersThisWeek = await GroupOrder.countDocuments({ supplierId, createdAt: { $gte: startOfWeek } });
+    const totalOrdersThisMonth = await GroupOrder.countDocuments({ supplierId, createdAt: { $gte: startOfMonth } });
+
+    // Pending deliveries (ordered or ongoing)
+    const pendingDeliveries = await GroupOrder.countDocuments({ supplierId, status: { $in: ['ordered', 'ongoing'] } });
+
+    // Revenue earned (sum of completed order quantities * 10 as dummy price)
+    const completedOrders = await GroupOrder.find({ supplierId, status: 'completed' });
+    const revenueEarned = completedOrders.reduce((sum, order) => sum + (order.totalQuantity || 0) * 10, 0);
+
+    // Top-rated product (by average review)
+    // For now, just return the most frequent item in completed orders as a placeholder
+    const itemCounts = {};
+    completedOrders.forEach(order => {
+      if (order.items) itemCounts[order.items] = (itemCounts[order.items] || 0) + 1;
+    });
+    let topRatedProduct = null;
+    let maxCount = 0;
+    Object.entries(itemCounts).forEach(([item, count]) => {
+      if (count > maxCount) {
+        topRatedProduct = item;
+        maxCount = count;
+      }
+    });
+
+    res.json({
+      totalOrders,
+      totalOrdersThisWeek,
+      totalOrdersThisMonth,
+      pendingDeliveries,
+      revenueEarned,
+      topRatedProduct
+    });
+  } catch (error) {
+    console.error('Error fetching supplier overview:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
 module.exports = router;

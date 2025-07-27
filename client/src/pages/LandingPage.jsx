@@ -20,12 +20,8 @@ const LandingPage = () => {
           <ul className="landing-navlinks">
             <li onClick={() => navigate("/login")}>LOGIN</li>
             <li onClick={() => navigate("/register")}>SIGN UP</li>
-            <li>ABOUT</li>
-            <li>CONTACT</li>
-            <li>FAQ</li>
-            <li>
-              <span className="search-icon">&#128269;</span>
-            </li>
+            
+            
           </ul>
         </nav>
         <div className="landing-content">

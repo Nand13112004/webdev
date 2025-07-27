@@ -40,63 +40,27 @@ function App() {
         />
         <Route
           path="/dashboard-vendor"
-          element={
-            <>
-              <Header />
-              <DashboardVendor />
-              <Footer />
-            </>
-          }
+          element={<DashboardVendor />}
         />
         <Route
           path="/dashboard-supplier"
-          element={
-            <>
-              <Header />
-              <DashboardSupplier />
-              <Footer />
-            </>
-          }
+          element={<DashboardSupplier />}
         />
         <Route
           path="/group-orders"
-          element={
-            <>
-              <Header />
-              <GroupOrderPage />
-              <Footer />
-            </>
-          }
+          element={<GroupOrderPage />}
         />
         <Route
           path="/suppliers"
-          element={
-            <>
-              <Header />
-              <SupplierListPage />
-              <Footer />
-            </>
-          }
+          element={<SupplierListPage />}
         />
         <Route
           path="/track-order"
-          element={
-            <>
-              <Header />
-              <OrderTrackingPage />
-              <Footer />
-            </>
-          }
+          element={<OrderTrackingPage />}
         />
         <Route
           path="/review"
-          element={
-            <>
-              <Header />
-              <ReviewPage />
-              <Footer />
-            </>
-          }
+          element={<ReviewPage />}
         />
         <Route
           path="*"
